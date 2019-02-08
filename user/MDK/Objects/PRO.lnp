@@ -1,0 +1,11 @@
+".\Objects\IAP15W4K32S4_IT.obj",
+".\Objects\pro.obj",
+".\Objects\adc.obj",
+".\Objects\delay.obj",
+".\Objects\eeprom.obj",
+".\Objects\exint.obj",
+".\Objects\io.obj",
+".\Objects\uart.obj" 
+TO ".\Objects\PRO" 
+PRINT(".\Listings\PRO.m51") RAMSIZE(256) 
+DISABLEWARNING (16) 

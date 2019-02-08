@@ -1,0 +1,134 @@
+C51 COMPILER V9.54   USER_TIMER                                                            02/08/2019 22:44:57 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE USER_TIMER
+OBJECT MODULE PLACED IN .\Objects\user_timer.obj
+COMPILER INVOKED BY: C:\keil_v5\C51\BIN\C51.EXE ..\user_c\user_timer.c OPTIMIZE(8,SPEED) BROWSE INCDIR(..\user_h;..\..\l
+                    -ib.h) DEBUG OBJECTEXTEND PRINT(.\Listings\user_timer.lst) TABS(2) OBJECT(.\Objects\user_timer.obj)
+
+line level    source
+
+   1          #include"STC15.h"
+   2          #include"INTRINS.h"
+   3          #include"user_timer.h"
+   4          
+   5          
+   6          void timer0_init(void)    //1毫秒@30.000MHz
+   7          {
+   8   1        AUXR &= 0x7F;   //定时器时钟12T模式
+   9   1        TMOD &= 0xF0;   //设置定时器模式
+  10   1        TL0 = 0x3C;   //设置定时初值
+  11   1        TH0 = 0xF6;   //设置定时初值
+  12   1        TF0 = 0;    //清除TF0标志
+  13   1        
+  14   1        EA = 1;
+  15   1        ET0 = 1;
+  16   1        TR0 = 1;    //定时器0开始计时
+  17   1      }
+  18          
+  19          void timer0_cmd(bit state)
+  20          {
+  21   1        if(state == set_bit)
+  22   1          {
+  23   2            ET0 = 1;
+  24   2            TR0 = 1;
+  25   2          }
+  26   1        else
+  27   1          {
+  28   2            ET0 = 0;
+  29   2            TR0 = 0;
+  30   2          }
+  31   1      }
+  32           
+  33          
+  34          void timer3_init(void) // 0.5u @30Mhz
+  35          {
+  36   1        T4T3M |= 0x02;    //定时器时钟1T模式
+  37   1        T3L = 0xFC;   //设置定时初值
+  38   1        T3H = 0xFF;   //设置定时初值
+  39   1        T4T3M |= 0x08;    //定时器3开始计时
+  40   1        T4T3M &= 0xfe;  //关闭定时器3对外时钟输出
+  41   1      
+  42   1        IE2 &= 0xdf; //关闭定时器3的中断
+  43   1      }
+  44          
+  45          void timer3_cmd(bit state)
+  46          {
+  47   1        if(state == set_bit)
+  48   1          {
+  49   2            T4T3M |= 0x01;
+  50   2          }
+  51   1        else
+  52   1          {
+  53   2            T4T3M &= 0xfe;
+  54   2          }
+C51 COMPILER V9.54   USER_TIMER                                                            02/08/2019 22:44:57 PAGE 2   
+
+  55   1      }
+  56          
+  57          void timer4_init(void)
+  58          {
+  59   1        T4T3M |= 0x20;    //定时器时钟1T模式
+  60   1        T4L = 0xFC;   //设置定时初值
+  61   1        T4H = 0xFF;   //设置定时初值
+  62   1        T4T3M |= 0x80;    //定时器4开始计时
+  63   1        T4T3M &= 0xef;  //关闭定时器4对外时钟输出
+  64   1      
+  65   1        IE2 &= 0xbf; //关闭定时器4的中断
+  66   1      }
+  67          
+  68          void timer4_cmd(bit state)
+  69          {
+  70   1        if(state == set_bit)
+  71   1          {
+  72   2            T4T3M |= 0x10;
+  73   2          }
+  74   1        else
+  75   1          {
+  76   2            T4T3M &= 0xef;
+  77   2          }
+  78   1      
+  79   1      }
+  80          
+  81          void timer1_init(void) //100us @30.000MHz
+  82          {
+  83   1        AUXR |= 0x40;   //定时器时钟1T模式
+  84   1        TMOD &= 0x0F;   //设置定时器模式
+  85   1        TL1 = 0x48;   //设置定时初值
+  86   1        TH1 = 0xF4;   //设置定时初值
+  87   1        TF1 = 0;    //清除TF1标志
+  88   1        TR1 = 0;    //定时器1停止计时
+  89   1        
+  90   1        EA = 1; //开启总中断
+  91   1        ET1 = 0; //关闭定时器1中断
+  92   1      }
+  93          
+  94          void timer1_cmd(bit state)
+  95          {
+  96   1        if(state == set_bit)
+  97   1        {
+  98   2          TR1 = 1;
+  99   2          ET1 = 1;
+ 100   2        }
+ 101   1        else
+ 102   1        {
+ 103   2          timer1_init();
+ 104   2        }
+ 105   1      }
+ 106          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    127    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       4
+C51 COMPILER V9.54   USER_TIMER                                                            02/08/2019 22:44:57 PAGE 3   
+
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

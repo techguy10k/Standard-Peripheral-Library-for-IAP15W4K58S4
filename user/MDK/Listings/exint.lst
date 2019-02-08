@@ -1,0 +1,89 @@
+C51 COMPILER V9.54   EXINT                                                                 02/08/2019 22:58:54 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE EXINT
+OBJECT MODULE PLACED IN .\Objects\exint.obj
+COMPILER INVOKED BY: C:\keil_v5\C51\BIN\C51.EXE ..\..\lib.c\exint.c OPTIMIZE(8,SPEED) BROWSE INCDIR(..\user_h;..\..\lib.
+                    -h) DEBUG OBJECTEXTEND PRINT(.\Listings\exint.lst) TABS(2) OBJECT(.\Objects\exint.obj)
+
+line level    source
+
+   1          #include"STC15.h"
+   2          #include"exint.h"
+   3          
+   4          
+   5          void exint2_init(void)
+   6          {
+   7   1        EA = 1;
+   8   1        INT_CLKO |= 0x10;
+   9   1      }
+  10          
+  11          void exint0_init(void)
+  12          {
+  13   1        P32 = 1; //下降沿
+  14   1        IT0 = 1;
+  15   1        EX0 = 1;
+  16   1        EA = 1;
+  17   1      }
+  18          
+  19          void exint1_init(void)
+  20          {
+  21   1        P33 = 1; //下降沿
+  22   1        IT1 = 1;
+  23   1        EX1 = 1;
+  24   1        EA = 1;
+  25   1      }
+  26          
+  27          
+  28          void exint2_cmd(bit state)
+  29          {
+  30   1        if(state == set_bit)
+  31   1        {
+  32   2          INT_CLKO |= 0x10;
+  33   2        }
+  34   1        else
+  35   1        {
+  36   2          INT_CLKO &= 0xef;
+  37   2        }
+  38   1      }
+  39          
+  40          void exint0_cmd(bit state)
+  41          {
+  42   1        if(state == set_bit)
+  43   1        {
+  44   2          EX0 = 1;
+  45   2        }
+  46   1        else
+  47   1        {
+  48   2          EX0 = 0;
+  49   2        }
+  50   1      }
+  51          
+  52          void exint1_cmd(bit state)
+  53          {
+  54   1        if(state == set_bit)
+C51 COMPILER V9.54   EXINT                                                                 02/08/2019 22:58:54 PAGE 2   
+
+  55   1        {
+  56   2          EX1 = 1;
+  57   2        }
+  58   1        else
+  59   1        {
+  60   2          EX1 = 0;
+  61   2        }
+  62   1      }
+  63          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     53    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       3
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

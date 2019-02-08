@@ -1,0 +1,573 @@
+C51 COMPILER V9.54   MT8880                                                                02/08/2019 22:49:37 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE MT8880
+OBJECT MODULE PLACED IN .\Objects\mt8880.obj
+COMPILER INVOKED BY: C:\keil_v5\C51\BIN\C51.EXE ..\..\lib.c\mt8880.c OPTIMIZE(8,SPEED) BROWSE INCDIR(..\user_h;..\..\lib
+                    -.h) DEBUG OBJECTEXTEND PRINT(.\Listings\mt8880.lst) TABS(2) OBJECT(.\Objects\mt8880.obj)
+
+line level    source
+
+   1          #include"mt8880.h"
+   2          #include"STC15.h"
+   3          #include"INTRINS.h"
+   4          #include"delay.h"
+   5          #include"uart.h"
+   6          #include"user_timer.h"
+*** WARNING C318 IN LINE 6 OF ..\..\lib.c\mt8880.c: can't open file 'user_timer.h'
+   7          #include"stdlib.h"
+   8          #include"command.h"
+*** WARNING C318 IN LINE 8 OF ..\..\lib.c\mt8880.c: can't open file 'command.h'
+   9          #include"exint.h"
+  10          #include"io.h"
+  11          #include"pro.h"
+*** WARNING C318 IN LINE 11 OF ..\..\lib.c\mt8880.c: can't open file 'pro.h'
+  12          
+  13          #include"string.h"
+  14          
+  15          extern bit mt8880_recflag;
+  16          extern unsigned char mt8880_rec_raw, mt8880_rec;
+  17          extern xdata unsigned int mt8880_counter;
+  18          extern systemstatus_typedef* systemstatus;
+*** ERROR C129 IN LINE 18 OF ..\..\lib.c\mt8880.c: missing ';' before '*'
+  19          
+  20          
+  21          unsigned char decode_table(unsigned char input);
+  22          unsigned char encode_table(unsigned char input);
+  23          
+  24          void mt8880_write_transmit_data(unsigned char data_input)
+  25          {
+  26            clk = 0;
+  27          
+  28            data_input = data_input << 4;
+  29            P2 = 0x0f;
+  30            rs0 = 0;
+  31            rw = 0;
+  32          
+  33          
+  34            P2 |= data_input;
+  35            delay1us();
+  36            cs = 0;
+  37            clk = 1;
+  38            delay1us();
+  39            clk = 0;
+  40            delay1us();
+  41            cs = 1;
+  42          }
+  43          
+  44          mt8880_status_typedef mt8880_get_status(bit clk_enable)
+  45          {
+  46            unsigned char data_read;
+  47            mt8880_status_typedef mt8880_status;
+  48          
+  49            timer4_cmd(reset_bit);
+  50          
+C51 COMPILER V9.54   MT8880                                                                02/08/2019 22:49:37 PAGE 2   
+
+  51            clk = 0;
+  52          
+  53            P2 = 0Xff;
+  54            rs0 = 1;
+  55            rw = 1;
+  56          
+  57          
+  58            cs = 0;
+  59            clk = 1;
+  60            delay1us();
+  61            data_read = P2;
+  62            clk = 0;
+  63            delay1us();
+  64            cs = 1;
+  65          
+  66            data_read = data_read >> 4;
+  67          
+  68            if(data_read & 0x01)
+  69              mt8880_status.mt8880_irq = 1;
+  70            if(data_read & 0x02)
+  71              mt8880_status.mt8880_trans_data_empty = 1;
+  72            if(data_read & 0x04)
+  73              mt8880_status.mt8880_rec_data_full = 1;
+  74            if(data_read & 0x08)
+  75              mt8880_status.mt8880_delayed_steering = 1;
+  76          
+  77            if(clk_enable == 1)
+  78              timer4_cmd(set_bit);
+  79          
+  80            return mt8880_status;
+  81          }
+  82          
+  83          unsigned char mt8880_read_receive_data(void)
+  84          {
+  85            unsigned char data_read;
+  86          
+  87            timer4_cmd(set_bit);
+  88          
+  89            clk = 0;
+  90          
+  91            P2 = 0Xff;
+  92            rs0 = 0;
+  93            rw = 1;
+  94          
+  95            cs = 0;
+  96            clk = 1;
+  97            delay1us();
+  98            data_read = P2;
+  99            clk = 0;
+ 100            delay1us();
+ 101            cs = 1;
+ 102          
+ 103            data_read = data_read >> 4;
+ 104          
+ 105            timer4_cmd(set_bit);
+ 106          
+ 107            return data_read;
+ 108          }
+ 109          
+ 110          void mt8880_write_control_data(mt8880_control_typedef* mt8880_control)
+ 111          {
+ 112            unsigned char data_write_cra = 0x00;
+C51 COMPILER V9.54   MT8880                                                                02/08/2019 22:49:37 PAGE 3   
+
+ 113            unsigned char data_write_crb = 0x00;
+ 114          
+ 115            if(mt8880_control->tone_output)
+ 116              data_write_cra |= 0x01;
+ 117            if(mt8880_control->mode_control)
+ 118              data_write_cra |= 0x02;
+ 119            if(mt8880_control->interrupt_enable)
+ 120              data_write_cra |= 0x04;
+ 121            if(mt8880_control->register_b_selected)
+ 122              data_write_cra |= 0x08;
+ 123          
+ 124            if(mt8880_control->burst_mode)
+ 125              data_write_crb |= 0x01;
+ 126            if(mt8880_control->test_mode)
+ 127              data_write_crb |= 0x02;
+ 128            if(mt8880_control->single_dual_tone_generation)
+ 129              data_write_crb |= 0x04;
+ 130            if(mt8880_control->column_row_tones)
+ 131              data_write_crb |= 0x08;
+ 132          
+ 133            data_write_cra = data_write_cra << 4;
+ 134            data_write_crb = data_write_crb << 4;
+ 135          
+ 136            clk = 0;
+ 137          
+ 138          
+ 139            P2 = 0x0f;
+ 140            rs0 = 1;
+ 141            rw = 0;
+ 142          
+ 143            P2 |= data_write_cra;
+ 144            cs = 0;
+ 145            clk = 1;
+ 146            delay1us();
+ 147            clk = 0;
+ 148            delay1us();
+ 149            cs = 1;
+ 150          
+ 151            if(mt8880_control->register_b_selected == 0)
+ 152              {
+ 153                return;
+ 154              }
+ 155          
+ 156            P2 = 0x0f;
+ 157            rs0 = 1;
+ 158            rw = 0;
+ 159          
+ 160            P2 |= data_write_crb;
+ 161            cs = 0;
+ 162            clk = 1;
+ 163            delay1us();
+ 164            clk = 0;
+ 165            delay1us();
+ 166            cs = 1;
+ 167          
+ 168          }
+ 169          
+ 170          
+ 171          void mt8880_bootup_setup(void)
+ 172          {
+ 173            mt8880_control_typedef* mt8880_control = NULL;
+ 174            mt8880_control = malloc(sizeof(mt8880_control_typedef));
+C51 COMPILER V9.54   MT8880                                                                02/08/2019 22:49:37 PAGE 4   
+
+ 175            memset(mt8880_control,0,sizeof(mt8880_control_typedef));
+ 176          
+ 177            mt8880_control->tone_output = reset_bit;
+ 178            mt8880_control->mode_control = reset_bit;
+ 179            mt8880_control->interrupt_enable = reset_bit;
+ 180            mt8880_control->register_b_selected = reset_bit;
+ 181            mt8880_control->burst_mode = reset_bit;
+ 182            mt8880_control->test_mode = reset_bit;
+ 183            mt8880_control->single_dual_tone_generation = reset_bit;
+ 184            mt8880_control->column_row_tones = reset_bit;
+ 185          
+ 186          
+ 187            mt8880_get_status(reset_bit);
+ 188            mt8880_write_control_data(mt8880_control);
+ 189            mt8880_write_control_data(mt8880_control);
+ 190            mt8880_control->register_b_selected = set_bit;
+ 191            mt8880_write_control_data(mt8880_control);
+ 192            mt8880_control->register_b_selected = reset_bit;
+ 193            mt8880_write_control_data(mt8880_control);
+ 194            mt8880_get_status(reset_bit);
+ 195          
+ 196            free(mt8880_control);
+ 197          
+ 198          }
+ 199          
+ 200          
+ 201          /*
+ 202            先发低四位 再发高四位
+ 203          */
+ 204          void mt8880_send_one_byte(unsigned char data_input)
+ 205          {
+ 206            mt8880_control_typedef*  mt8880_control;
+ 207          
+ 208            mt8880_control = malloc(sizeof(mt8880_control_typedef));
+ 209          
+ 210            if(mt8880_control == NULL)
+ 211              {
+ 212                send_string_to_console("ERROR CODE 2011!\nSystem halt.\n");
+ 213                while(1);
+ 214              }
+ 215          
+ 216          
+ 217            mt8880_control->tone_output = reset_bit;
+ 218            mt8880_control->mode_control = mt8880_mode_dtmf;
+ 219            mt8880_control->interrupt_enable = reset_bit; //disable interrupts when its sending data
+ 220            mt8880_control->register_b_selected = set_bit;
+ 221            mt8880_control->burst_mode = mt8880_burst_mode_disable;
+ 222            mt8880_control->single_dual_tone_generation = mt8880_single_dual_tone_generation_dual;
+ 223            mt8880_control->test_mode = reset_bit;
+ 224            mt8880_control->column_row_tones = reset_bit;
+ 225          
+ 226            exint2_cmd(reset_bit);
+ 227            timer4_cmd(reset_bit);
+ 228            clk = 0;
+ 229          
+ 230            mt8880_bootup_setup();
+ 231            mt8880_write_control_data(mt8880_control);
+ 232          
+ 233            mt8880_write_transmit_data(data_input);
+ 234          
+ 235            mt8880_control->tone_output = set_bit;
+ 236            mt8880_write_control_data(mt8880_control);
+C51 COMPILER V9.54   MT8880                                                                02/08/2019 22:49:37 PAGE 5   
+
+ 237          
+ 238          
+ 239            mt8880_counter = 0;
+ 240            while((mt8880_counter < mt8880_send_high_time) && (1));
+ 241          
+ 242            mt8880_control->tone_output = reset_bit;
+ 243            mt8880_write_control_data(mt8880_control);
+ 244          
+ 245            mt8880_counter = 0;
+ 246            while((mt8880_counter < mt8880_send_low_time) && (1));
+ 247            \
+ 248            mt8880_get_status(reset_bit);
+ 249          
+ 250            data_input >>= 4;
+ 251          
+ 252            mt8880_control->tone_output = set_bit;
+ 253            mt8880_write_control_data(mt8880_control);
+ 254            mt8880_write_transmit_data(data_input);
+ 255          
+ 256            mt8880_counter = 0;
+ 257            while((mt8880_counter < mt8880_send_high_time) && (1));
+ 258          
+ 259            mt8880_control->tone_output = reset_bit;
+ 260            mt8880_write_control_data(mt8880_control);
+ 261          
+ 262            mt8880_counter = 0;
+ 263            while((mt8880_counter < mt8880_send_low_time) && (1));
+ 264          
+ 265            mt8880_get_status(reset_bit);
+ 266          
+ 267            free(mt8880_control);
+ 268          
+ 269          }
+ 270          
+ 271          void mt8880_listen(void)
+ 272          {
+ 273            xdata mt8880_control_typedef*  mt8880_control;
+ 274          
+ 275            mt8880_control = malloc(sizeof(mt8880_control_typedef));
+ 276          
+ 277            if(mt8880_control == NULL)
+ 278              {
+ 279                send_string_to_console("ERROR CODE 2012!\nSystem halt.\n");
+ 280                while(1);
+ 281              }
+ 282          
+ 283            mt8880_control->tone_output = reset_bit;
+ 284            mt8880_control->mode_control = mt8880_mode_dtmf;
+ 285            mt8880_control->interrupt_enable = set_bit;
+ 286            mt8880_control->register_b_selected = set_bit;
+ 287            mt8880_control->burst_mode = mt8880_burst_mode_disable;
+ 288            mt8880_control->single_dual_tone_generation = mt8880_single_dual_tone_generation_dual;
+ 289            mt8880_control->test_mode = reset_bit;
+ 290            mt8880_control->column_row_tones = reset_bit;
+ 291            mt8880_bootup_setup();
+ 292            mt8880_write_control_data(mt8880_control);
+ 293          
+ 294            free(mt8880_control);
+ 295            timer4_cmd(set_bit);
+ 296            exint2_cmd(set_bit);
+ 297          }
+ 298          
+C51 COMPILER V9.54   MT8880                                                                02/08/2019 22:49:37 PAGE 6   
+
+ 299          void mt8880_receive(void)
+ 300          {
+ 301            unsigned char rec = 0;
+ 302            unsigned char temp = 10;
+ 303            unsigned char i = 0;
+ 304          
+ 305            if(mt8880_recflag != 0)
+ 306              {
+ 307                mt8880_counter = 0x00;
+ 308          
+ 309                LED_RX = 0;
+ 310          
+ 311                while(mt8880_counter < 25);
+ 312                rec = mt8880_read_receive_data();
+ 313          
+ 314                while(mt8880_counter < 125);
+ 315                temp = mt8880_read_receive_data();
+ 316          
+ 317                while(mt8880_counter < 220);
+ 318          
+ 319                temp = temp << 4;
+ 320          
+ 321                rec |= temp;
+ 322          
+ 323                send_byte_to_console(rec);
+ 324          
+ 325                mt8880_recflag = 0;
+ 326                LED_RX = 1;
+ 327                systemstatus->system_state = system_state_listen;
+ 328              }
+ 329          }
+ 330          
+ 331          void mt8880_transmit_start(void)
+ 332          {
+ 333            systemstatus->system_state = system_state_transmit;
+ 334            mt8880_counter = 0;
+ 335            mt8880_ptt_cmd(set_bit);
+ 336            while((mt8880_counter < mt8880_start_delay_time) && (1));
+ 337          }
+ 338          
+ 339          void mt8880_transmit_stop(void)
+ 340          {
+ 341            mt8880_counter = 0;
+ 342            while((mt8880_counter < mt8880_stop_delay_time) && (1));
+ 343            mt8880_ptt_cmd(reset_bit);
+ 344            mt8880_listen();
+ 345            systemstatus->system_state = system_state_listen;
+ 346          }
+ 347          
+ 348          
+ 349          
+ 350          void mt8880_send_string(unsigned char* string)
+ 351          {
+ 352          //  hc05_cmd(reset_bit);
+ 353            mt8880_transmit_start();
+ 354          
+ 355            while(*string)
+ 356              {
+ 357                mt8880_send_one_byte(*string);
+ 358                string ++;
+ 359                delayms(100);
+ 360              }
+C51 COMPILER V9.54   MT8880                                                                02/08/2019 22:49:37 PAGE 7   
+
+ 361          
+ 362            mt8880_transmit_stop();
+ 363            hc05_cmd(set_bit);
+ 364          }
+ 365          
+ 366          void mt8880_send_sequence_byte(unsigned char* input,unsigned int lenth)
+ 367          {
+ 368            unsigned int i;
+ 369          
+ 370            mt8880_transmit_start();
+ 371            for(i = 0; i < lenth; i ++)
+ 372              {
+ 373                mt8880_send_one_byte(input[i]);
+ 374              }
+ 375            mt8880_transmit_stop();
+ 376          }
+ 377          
+ 378          unsigned char get_mode(unsigned char* input)
+ 379          {
+ 380            xdata unsigned char number;
+ 381            xdata unsigned char row;
+ 382            xdata unsigned char more1;
+ 383            xdata unsigned char* same_count = NULL;
+ 384          
+ 385            same_count = calloc(5, sizeof(unsigned char));
+ 386          
+ 387            for(row = 0; row < 5; row ++)
+ 388              {
+ 389                for(number = 0; number < 5; number ++)
+ 390                  {
+ 391                    if(input[row] == input[number])
+ 392                      {
+ 393                        same_count[row] ++;
+ 394                      }
+ 395                  }
+ 396              }
+ 397          
+ 398            if(same_count[0] > same_count[1])
+ 399              {
+ 400                more1 = 0;
+ 401              }
+ 402            else
+ 403              {
+ 404                more1 = 1;
+ 405              }
+ 406          
+ 407            if(same_count[more1] > same_count[2])
+ 408              {
+ 409          
+ 410              }
+ 411            else
+ 412              {
+ 413                more1 = 2;
+ 414              }
+ 415          
+ 416            if(same_count[more1] > same_count[3])
+ 417              {
+ 418          
+ 419              }
+ 420            else
+ 421              {
+ 422                more1 = 3;
+C51 COMPILER V9.54   MT8880                                                                02/08/2019 22:49:37 PAGE 8   
+
+ 423              }
+ 424          
+ 425            if(same_count[more1] > same_count[4])
+ 426              {
+ 427          
+ 428              }
+ 429            else
+ 430              {
+ 431                more1 = 4;
+ 432              }
+ 433          
+ 434            return input[more1];
+ 435          }
+ 436          
+ 437          unsigned char decode_table(unsigned char input)
+ 438          {
+ 439            switch(input)
+ 440              {
+ 441              case 0x81 :
+ 442                return ' ';
+ 443              case 0x82 :
+ 444                return '-';
+ 445              case 0x83 :
+ 446                return '/';
+ 447              case 0x84 :
+ 448                return '=';
+ 449              case 0x85 :
+ 450                return '>';
+ 451              case 0x86 :
+ 452                return '?';
+ 453              case 0x87 :
+ 454                return '@';
+ 455              case 0x88 :
+ 456                return 'M';
+ 457              case 0x89 :
+ 458                return 'N';
+ 459              case 0x8a :
+ 460                return 'O';
+ 461              case 0x8b :
+ 462                return ']';
+ 463              case 0x8c :
+ 464                return '^';
+ 465          
+ 466              case 0x91 :
+ 467                return '_';
+ 468              case 0x92 :
+ 469                return '`';
+ 470              case 0x93 :
+ 471                return 'm';
+ 472              case 0x94 :
+ 473                return 'n';
+ 474              case 0x95 :
+ 475                return 'o';
+ 476              case 0x96 :
+ 477                return 'p';
+ 478              case 0x97 :
+ 479                return '}';
+ 480              case 0x98 :
+ 481                return '~';
+ 482              case 0x99 :
+ 483                return 0x7f;
+ 484          
+C51 COMPILER V9.54   MT8880                                                                02/08/2019 22:49:37 PAGE 9   
+
+ 485              default :
+ 486                return input;
+ 487              }
+ 488          }
+ 489          
+ 490          unsigned char encode_table(unsigned char input)
+ 491          {
+ 492            switch(input)
+ 493              {
+ 494              case ' ' :
+ 495                return 0x81;
+ 496              case '-' :
+ 497                return 0x82;
+ 498              case '/' :
+ 499                return 0x83;
+ 500              case '=' :
+ 501                return 0x84;
+ 502              case '>' :
+ 503                return 0x85;
+ 504              case '?' :
+ 505                return 0x86;
+ 506              case '@' :
+ 507                return 0x87;
+ 508              case 'M' :
+ 509                return 0x88;
+ 510              case 'N' :
+ 511                return 0x89;
+ 512              case 'O' :
+ 513                return 0x8a;
+ 514              case ']' :
+ 515                return 0x8b;
+ 516              case '^' :
+ 517                return 0x8c;
+ 518          
+ 519              case '_' :
+ 520                return 0x91;
+ 521              case '`' :
+ 522                return 0x92;
+ 523              case 'm' :
+ 524                return 0x93;
+ 525              case 'n' :
+ 526                return 0x94;
+ 527              case 'o' :
+ 528                return 0x95;
+ 529              case 'p' :
+ 530                return 0x96;
+ 531              case '}' :
+ 532                return 0x97;
+ 533              case '~' :
+ 534                return 0x98;
+ 535              case 0x7f :
+ 536                return 0x99;
+ 537          
+ 538              default :
+ 539                return input;
+ 540              }
+ 541          }
+
+C51 COMPILATION COMPLETE.  3 WARNING(S),  1 ERROR(S)
